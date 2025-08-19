@@ -105,7 +105,7 @@ class OpenPiFastInference:
             [
                 proprio[:3],
                 rpy_bridge_converted,
-                np.zeros(1),
+                #np.zeros(1),
                 [gripper_openness],
             ]
         )
