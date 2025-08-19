@@ -91,6 +91,7 @@ class OpenPiFastInference:
         self.sticky_gripper_action = 0.0
         self.previous_gripper_action = None
         self.action_plan = deque()
+        self.is_reset = True
 
     def preprocess_widowx_proprio(self, eef_pos) -> np.array:
         """convert ee rotation to the frame of top-down
@@ -168,8 +169,9 @@ class OpenPiFastInference:
         if not self.action_plan:
             observation = {
                 "observation/state": state,
-                "observation/primary_image": np.array(images[0]),
+                image_key: np.array(images[0]),
                 "prompt": task_description, 
+                "reset": self.is_reset, # tells policy server to reset VLM predictions if needed
             }
             action_chunk = self.policy_client.infer(observation)["actions"][:self.pred_action_horizon]
             self.action_plan.extend(action_chunk[: self.exec_horizon])
@@ -227,6 +229,7 @@ class OpenPiFastInference:
             action["gripper"] = 2.0 * (raw_action["open_gripper"] > 0.5) - 1.0
         
         action["terminate_episode"] = np.array([0.0])
+        self.is_reset = False
         return raw_action, action
 
     def _resize_image(self, image: np.ndarray) -> np.ndarray:
