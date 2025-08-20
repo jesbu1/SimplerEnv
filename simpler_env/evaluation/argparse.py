@@ -115,6 +115,26 @@ def get_args():
     parser.add_argument("--octo-init-rng", type=int, default=0, help="Octo init rng seed")
     parser.add_argument("--server-ip", type=str, default="0.0.0.0", help="Server IP for pi0 an other servers")
 
+    # wandb logging arguments
+    parser.add_argument(
+        "--use-wandb", action="store_true", help="Enable Weights & Biases logging"
+    )
+    parser.add_argument(
+        "--wandb-project",
+        type=str,
+        default="simpler-env-eval",
+        help="WandB project name",
+    )
+    parser.add_argument(
+        "--wandb-run-name", type=str, default=None, help="WandB run name"
+    )
+    parser.add_argument(
+        "--wandb-run-group", type=str, default=None, help="WandB run group"
+    )
+    parser.add_argument(
+        "--wandb-entity", type=str, default=None, help="WandB entity/username"
+    )
+
     args = parser.parse_args()
 
     # env args: robot pose

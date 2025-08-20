@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import tensorflow as tf
+import wandb
 
 from simpler_env.evaluation.argparse import get_args
 from simpler_env.evaluation.maniskill2_evaluator import maniskill2_evaluator
@@ -68,3 +69,29 @@ if __name__ == "__main__":
     success_arr = maniskill2_evaluator(model, args)
     print(args)
     print(" " * 10, "Average success", np.mean(success_arr))
+
+    # Initialize wandb logging if enabled
+    if args.use_wandb:
+        wandb.init(
+            project=args.wandb_project,
+            name=args.wandb_run_name,
+            group=args.wandb_run_group,
+            entity=args.wandb_entity,
+            config=vars(args),
+        )
+
+        # Log overall success rate
+        success_rate = np.mean(success_arr)
+        wandb.log(
+            {
+                "success_rate": success_rate,
+                "total_episodes": len(success_arr),
+                "successful_episodes": np.sum(success_arr),
+            }
+        )
+
+        # Log detailed episode results
+        for i, success in enumerate(success_arr):
+            wandb.log({f"episode_{i}_success": success})
+
+        wandb.finish()

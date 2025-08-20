@@ -5,6 +5,7 @@ Evaluate a model on ManiSkill2 environment.
 import os
 
 import numpy as np
+import wandb
 from transforms3d.euler import quat2euler
 
 from simpler_env.utils.env.env_builder import build_maniskill2_env, get_robot_control_mode
@@ -35,6 +36,8 @@ def run_maniskill2_eval_single_episode(
     enable_raytracing=False,
     additional_env_save_tags=None,
     logging_dir="./results",
+    use_wandb=False,
+    episode_idx=0,
 ):
 
     if additional_env_build_kwargs is None:
@@ -140,36 +143,39 @@ def run_maniskill2_eval_single_episode(
 
     episode_stats = info.get("episode_stats", {})
 
-    # save video
-    env_save_name = env_name
-    for k, v in additional_env_build_kwargs.items():
-        env_save_name = env_save_name + f"_{k}_{v}"
-    if additional_env_save_tags is not None:
-        env_save_name = env_save_name + f"_{additional_env_save_tags}"
-    ckpt_path_basename = ckpt_path if ckpt_path[-1] != "/" else ckpt_path[:-1]
-    ckpt_path_basename = ckpt_path_basename.split("/")[-1]
-    if obj_variation_mode == "xy":
-        video_name = f"{success}_obj_{obj_init_x}_{obj_init_y}"
-    elif obj_variation_mode == "episode":
-        video_name = f"{success}_obj_episode_{obj_episode_id}"
-    for k, v in episode_stats.items():
-        video_name = video_name + f"_{k}_{v}"
-    video_name = video_name + ".mp4"
-    if rgb_overlay_path is not None:
-        rgb_overlay_path_str = os.path.splitext(os.path.basename(rgb_overlay_path))[0]
-    else:
-        rgb_overlay_path_str = "None"
-    r, p, y = quat2euler(robot_init_quat)
-    video_path = f"{ckpt_path_basename}/{scene_name}/{control_mode}/{env_save_name}/rob_{robot_init_x}_{robot_init_y}_rot_{r:.3f}_{p:.3f}_{y:.3f}_rgb_overlay_{rgb_overlay_path_str}/{video_name}"
-    video_path = os.path.join(logging_dir, video_path)
-    write_video(video_path, images, fps=5)
+    # Log video to wandb instead of saving to file
+    if use_wandb:
+        # Convert images to video format for wandb
+        video_frames = np.array(images)
 
-    # save action trajectory
-    action_path = video_path.replace(".mp4", ".png")
-    action_root = os.path.dirname(action_path) + "/actions/"
-    os.makedirs(action_root, exist_ok=True)
-    action_path = action_root + os.path.basename(action_path)
-    model.visualize_epoch(predicted_actions, images, save_path=action_path)
+        # Create descriptive video title
+        if obj_variation_mode == "xy":
+            video_title = (
+                f"Episode_{episode_idx}_{success}_obj_{obj_init_x}_{obj_init_y}"
+            )
+        elif obj_variation_mode == "episode":
+            video_title = (
+                f"Episode_{episode_idx}_{success}_obj_episode_{obj_episode_id}"
+            )
+
+        # Add episode stats to title
+        for k, v in episode_stats.items():
+            video_title = video_title + f"_{k}_{v}"
+
+        # Log video to wandb
+        wandb.log(
+            {
+                f"episode_{episode_idx}_video": wandb.Video(
+                    video_frames, fps=5, format="mp4", caption=video_title
+                ),
+                f"episode_{episode_idx}_success": success == "success",
+                f"episode_{episode_idx}_timesteps": timestep,
+            }
+        )
+
+        # Also log episode stats
+        for k, v in episode_stats.items():
+            wandb.log({f"episode_{episode_idx}_{k}": v})
 
     return success == "success"
 
@@ -177,6 +183,7 @@ def run_maniskill2_eval_single_episode(
 def maniskill2_evaluator(model, args):
     control_mode = get_robot_control_mode(args.robot, args.policy_model)
     success_arr = []
+    episode_idx = 0
 
     # run inference
     for robot_init_x in args.robot_init_xs:
@@ -201,6 +208,7 @@ def maniskill2_evaluator(model, args):
                     additional_env_save_tags=args.additional_env_save_tags,
                     obs_camera_name=args.obs_camera_name,
                     logging_dir=args.logging_dir,
+                    use_wandb=args.use_wandb,
                 )
                 if args.obj_variation_mode == "xy":
                     for obj_init_x in args.obj_init_xs:
@@ -209,12 +217,21 @@ def maniskill2_evaluator(model, args):
                                 run_maniskill2_eval_single_episode(
                                     obj_init_x=obj_init_x,
                                     obj_init_y=obj_init_y,
+                                    episode_idx=episode_idx,
                                     **kwargs,
                                 )
                             )
+                            episode_idx += 1
                 elif args.obj_variation_mode == "episode":
                     for obj_episode_id in range(args.obj_episode_range[0], args.obj_episode_range[1]):
-                        success_arr.append(run_maniskill2_eval_single_episode(obj_episode_id=obj_episode_id, **kwargs))
+                        success_arr.append(
+                            run_maniskill2_eval_single_episode(
+                                obj_episode_id=obj_episode_id,
+                                episode_idx=episode_idx,
+                                **kwargs,
+                            )
+                        )
+                        episode_idx += 1
                 else:
                     raise NotImplementedError()
 
