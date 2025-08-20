@@ -167,10 +167,11 @@ class OpenPiFastInference:
 
         if not self.action_plan:
             observation = {
-                "observation/state": state,
+                "state": state,
                 image_key: np.array(images[0]),
-                "prompt": task_description, 
-                "reset": self.is_reset, # tells policy server to reset VLM predictions if needed
+                "prompt": task_description,
+                "reset": self.is_reset,  # tells policy server to reset VLM predictions if needed
+                "camera_present": [1],
             }
             action_chunk = self.policy_client.infer(observation)["actions"][:self.pred_action_horizon]
             self.action_plan.extend(action_chunk[: self.exec_horizon])
