@@ -19,7 +19,7 @@ class OpenPiFastInference:
         server_ip: str = "0.0.0.0",
         unnorm_key: Optional[str] = None,
         policy_setup: str = "widowx_bridge",
-        exec_horizon: int = 4,
+        exec_horizon: int = 5,
         image_size: list[int] = [224, 224],
         action_scale: float = 1.0,
         action_ensemble_temp: float = -0.8,
