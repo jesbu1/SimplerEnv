@@ -65,11 +65,6 @@ if __name__ == "__main__":
     else:
         raise NotImplementedError()
 
-    # run real-to-sim evaluation
-    success_arr = maniskill2_evaluator(model, args)
-    print(args)
-    print(" " * 10, "Average success", np.mean(success_arr))
-
     # Initialize wandb logging if enabled
     if args.use_wandb:
         wandb.init(
@@ -79,7 +74,12 @@ if __name__ == "__main__":
             entity=args.wandb_entity,
             config=vars(args),
         )
+    # run real-to-sim evaluation
+    success_arr = maniskill2_evaluator(model, args)
+    print(args)
+    print(" " * 10, "Average success", np.mean(success_arr))
 
+    if args.use_wandb:
         # Log overall success rate
         success_rate = np.mean(success_arr)
         wandb.log(

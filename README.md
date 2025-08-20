@@ -80,11 +80,6 @@ Clone this repo:
 git clone https://github.com/simpler-env/SimplerEnv --recurse-submodules
 ```
 
-Install numpy<2.0 (otherwise errors in IK might occur in pinocchio):
-```
-pip install numpy==1.24.4
-```
-
 Install ManiSkill2 real-to-sim environments and their dependencies:
 ```
 cd {this_repo}/ManiSkill2_real2sim
@@ -96,6 +91,13 @@ Install this package:
 cd {this_repo}
 pip install -e .
 ```
+
+Install requirements:
+```
+pip install -r requirements_full_install.txt
+```
+
+ 
 
 **If you'd like to perform evaluations on our provided agents (e.g., RT-1, Octo), or add new robots and environments, please additionally follow the full installation instructions [here](#full-installation-rt-1-and-octo-inference-env-building).**
 
