@@ -1,4 +1,5 @@
-server_ip=${1:-"https://jessezhang.a.pinggy.link"}
+server_ip=${1:-"0.0.0.0:8001"}
+# server_ip=${1:-"https://jessezhang.a.pinggy.link"}
 logging_dir=${2:-"./results"}
 gpu_id=${3:-0}
 
