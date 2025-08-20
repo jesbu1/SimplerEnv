@@ -1,9 +1,10 @@
-import asyncio
 import logging
-import traceback
+import time
+from typing import Dict, Tuple, Union
+from urllib.parse import urlparse
 
-import websockets.asyncio.server
-import websockets.frames
+import websockets.sync.client
+from typing_extensions import override
 
 import abc
 from typing import Dict
@@ -76,57 +77,71 @@ packb = functools.partial(msgpack.packb, default=pack_array)
 Unpacker = functools.partial(msgpack.Unpacker, object_hook=unpack_array)
 unpackb = functools.partial(msgpack.unpackb, object_hook=unpack_array)
 
+class WebsocketClientPolicy(_base_policy.BasePolicy):
+    """Implements the Policy interface by communicating with a server over websocket.
 
-class WebsocketPolicyServer:
-    """Serves a policy using the websocket protocol. See websocket_client_policy.py for a client implementation.
-
-    Currently only implements the `load` and `infer` methods.
+    See WebsocketPolicyServer for a corresponding server implementation.
     """
 
-    def __init__(
-        self,
-        policy: BasePolicy,
-        host: str = "0.0.0.0",
-        port: int = 8000,
-        metadata: dict | None = None,
-    ) -> None:
-        self._policy = policy
-        self._host = host
-        self._port = port
-        self._metadata = metadata or {}
-        logging.getLogger("websockets.server").setLevel(logging.INFO)
+    def __init__(self, host: str = "localhost", port: int = 8000, address: Union[str, None] = None) -> None:
+        if address is None:
+            address = f"ws://{host}:{port}"
+        else:
+            if not address.startswith(("ws://", "wss://", "http://", "https://")):
+                address = f"ws://{address}"
 
-    def serve_forever(self) -> None:
-        asyncio.run(self.run())
+        parsed_url = urlparse(address)
 
-    async def run(self):
-        async with websockets.asyncio.server.serve(
-            self._handler,
-            self._host,
-            self._port,
-            compression=None,
-            max_size=None,
-        ) as server:
-            await server.serve_forever()
+        scheme = parsed_url.scheme
+        hostname = parsed_url.hostname
+        port = parsed_url.port
 
-    async def _handler(self, websocket: websockets.asyncio.server.ServerConnection):
-        logging.info(f"Connection from {websocket.remote_address} opened")
-        packer = Packer()
+        if hostname is None:
+            raise ValueError(f"Could not extract hostname from address: {address}")
 
-        await websocket.send(packer.pack(self._metadata))
+        ws_scheme = "ws"
+        if scheme in ["https", "wss"]:
+            ws_scheme = "wss"
+            if port is None:
+                port = 443
+        elif scheme in ["http", "ws"]:
+            ws_scheme = "ws"
+            if port is None:
+                port = 80
+        else:
+            if port is None:
+                print(f"Warning: Unknown scheme '{scheme}' or no scheme, defaulting to port 8000 for ws://")
+                port = 8000
 
+        self._uri = f"{ws_scheme}://{hostname}:{port}{parsed_url.path or ''}"
+
+        self._packer = msgpack_numpy.Packer()
+        self._ws, self._server_metadata = self._wait_for_server()
+
+    def get_server_metadata(self) -> Dict:
+        return self._server_metadata
+
+    def _wait_for_server(self) -> Tuple[websockets.sync.client.ClientConnection, Dict]:
+        logging.info(f"Waiting for server at {self._uri}...")
         while True:
             try:
-                obs = unpackb(await websocket.recv())
-                action = self._policy.infer(obs)
-                await websocket.send(packer.pack(action))
-            except websockets.ConnectionClosed:
-                logging.info(f"Connection from {websocket.remote_address} closed")
-                break
-            except Exception:
-                await websocket.send(traceback.format_exc())
-                await websocket.close(
-                    code=websockets.frames.CloseCode.INTERNAL_ERROR,
-                    reason="Internal server error. Traceback included in previous frame.",
-                )
-                raise
+                conn = websockets.sync.client.connect(self._uri, compression=None, max_size=None)
+                metadata = msgpack_numpy.unpackb(conn.recv())
+                return conn, metadata
+            except ConnectionRefusedError:
+                logging.info("Still waiting for server...")
+                time.sleep(5)
+
+    @override
+    def infer(self, obs: Dict) -> Dict:  # noqa: UP006
+        data = self._packer.pack(obs)
+        self._ws.send(data)
+        response = self._ws.recv()
+        if isinstance(response, str):
+            # we're expecting bytes; if the server sends a string, it's an error.
+            raise RuntimeError(f"Error in inference server:\n{response}")
+        return msgpack_numpy.unpackb(response)
+
+    @override
+    def reset(self) -> None:
+        pass

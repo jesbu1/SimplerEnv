@@ -12,7 +12,7 @@ from simpler_env.utils.action.action_ensemble import ActionEnsembler
 from .geometry import quat2mat, mat2euler
 import numpy as np
 import torch
-from openpi_client import websocket_client_policy as _websocket_client_policy
+from .websocket_client_policy import WebsocketPolicyServer
 
 
 class OpenPiFastInference:
@@ -53,7 +53,7 @@ class OpenPiFastInference:
         # TODO: add pi-fast loading ...
         host: str = "0.0.0.0"
         port: int = 8000
-        self.policy_client = _websocket_client_policy.WebsocketClientPolicy(host, port)
+        self.policy_client = WebsocketClientPolicy(host, port)
 
         self.image_size = image_size
         self.action_scale = action_scale
