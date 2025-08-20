@@ -148,6 +148,9 @@ def run_maniskill2_eval_single_episode(
         # Convert images to video format for wandb
         video_frames = np.array(images)
 
+        # convert to T x C  instead of channels last
+        video_frames = video_frames.transpose(0, 3, 1, 2)
+
         # Create descriptive video title
         if obj_variation_mode == "xy":
             video_title = (

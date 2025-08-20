@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 import numpy as np
 import tensorflow as tf
@@ -66,6 +67,10 @@ if __name__ == "__main__":
         raise NotImplementedError()
 
     # Initialize wandb logging if enabled
+    # add date-time to group
+    args.wandb_run_name = (
+        f"{args.wandb_run_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    )
     if args.use_wandb:
         wandb.init(
             project=args.wandb_project,
