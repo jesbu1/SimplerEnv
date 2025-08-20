@@ -6,12 +6,10 @@ import numpy as np
 from transforms3d.euler import euler2axangle
 from collections import deque
 from PIL import Image
-import torch
 import cv2 as cv
 from simpler_env.utils.action.action_ensemble import ActionEnsembler
 from .geometry import quat2mat, mat2euler
 import numpy as np
-import torch
 from .websocket_client_policy import WebsocketClientPolicy
 
 
@@ -51,9 +49,10 @@ class OpenPiFastInference:
         print(f"*** policy_setup: {policy_setup}, unnorm_key: {unnorm_key} ***")
 
         # TODO: add pi-fast loading ...
-        host: str = server_ip
-        port: int = 8000
-        self.policy_client = WebsocketClientPolicy(host, port)
+        # host: str = server_ip
+        # port: int = 8000
+        # self.policy_client = WebsocketClientPolicy(host, port)
+        self.policy_client = WebsocketClientPolicy(address=server_ip)
 
         self.image_size = image_size
         self.action_scale = action_scale

@@ -59,6 +59,7 @@ if __name__ == "__main__":
             server_ip=args.server_ip,
             policy_setup=args.policy_setup,
             action_scale=args.action_scale,
+            action_ensemble_temp=args.action_ensemble_temp,
         )
     else:
         raise NotImplementedError()

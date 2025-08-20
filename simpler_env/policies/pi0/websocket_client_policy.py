@@ -77,7 +77,7 @@ packb = functools.partial(msgpack.packb, default=pack_array)
 Unpacker = functools.partial(msgpack.Unpacker, object_hook=unpack_array)
 unpackb = functools.partial(msgpack.unpackb, object_hook=unpack_array)
 
-class WebsocketClientPolicy(_base_policy.BasePolicy):
+class WebsocketClientPolicy(BasePolicy):
     """Implements the Policy interface by communicating with a server over websocket.
 
     See WebsocketPolicyServer for a corresponding server implementation.
@@ -115,7 +115,7 @@ class WebsocketClientPolicy(_base_policy.BasePolicy):
 
         self._uri = f"{ws_scheme}://{hostname}:{port}{parsed_url.path or ''}"
 
-        self._packer = msgpack_numpy.Packer()
+        self._packer = Packer()
         self._ws, self._server_metadata = self._wait_for_server()
 
     def get_server_metadata(self) -> Dict:
@@ -126,7 +126,7 @@ class WebsocketClientPolicy(_base_policy.BasePolicy):
         while True:
             try:
                 conn = websockets.sync.client.connect(self._uri, compression=None, max_size=None)
-                metadata = msgpack_numpy.unpackb(conn.recv())
+                metadata = unpackb(conn.recv())
                 return conn, metadata
             except ConnectionRefusedError:
                 logging.info("Still waiting for server...")
@@ -140,7 +140,7 @@ class WebsocketClientPolicy(_base_policy.BasePolicy):
         if isinstance(response, str):
             # we're expecting bytes; if the server sends a string, it's an error.
             raise RuntimeError(f"Error in inference server:\n{response}")
-        return msgpack_numpy.unpackb(response)
+        return unpackb(response)
 
     @override
     def reset(self) -> None:
