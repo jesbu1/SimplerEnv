@@ -113,6 +113,7 @@ def get_args():
     parser.add_argument("--logging-dir", type=str, default="./results")
     parser.add_argument("--tf-memory-limit", type=int, default=3072, help="Tensorflow memory limit")
     parser.add_argument("--octo-init-rng", type=int, default=0, help="Octo init rng seed")
+    parser.add_argument("--server-ip", type=str, default="0.0.0.0", help="Server IP for pi0 an other servers")
 
     args = parser.parse_args()
 

@@ -12,13 +12,13 @@ from simpler_env.utils.action.action_ensemble import ActionEnsembler
 from .geometry import quat2mat, mat2euler
 import numpy as np
 import torch
-from .websocket_client_policy import WebsocketPolicyServer
+from .websocket_client_policy import WebsocketClientPolicy
 
 
 class OpenPiFastInference:
     def __init__(
         self,
-        saved_model_path: str = "pretrained/pi0",
+        server_ip: str = "0.0.0.0",
         unnorm_key: Optional[str] = None,
         policy_setup: str = "widowx_bridge",
         exec_horizon: int = 4,
@@ -51,7 +51,7 @@ class OpenPiFastInference:
         print(f"*** policy_setup: {policy_setup}, unnorm_key: {unnorm_key} ***")
 
         # TODO: add pi-fast loading ...
-        host: str = "0.0.0.0"
+        host: str = server_ip
         port: int = 8000
         self.policy_client = WebsocketClientPolicy(host, port)
 

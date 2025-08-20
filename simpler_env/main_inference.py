@@ -53,6 +53,13 @@ if __name__ == "__main__":
                 init_rng=args.octo_init_rng,
                 action_scale=args.action_scale,
             )
+    elif args.policy_model == "pi0":
+        from simpler_env.policies.pi0.pi0_server_model import OpenPiFastInference
+        model = OpenPiFastInference(
+            server_ip=args.server_ip,
+            policy_setup=args.policy_setup,
+            action_scale=args.action_scale,
+        )
     else:
         raise NotImplementedError()
 
