@@ -37,11 +37,10 @@ class LerobotServerModel(OpenPiFastInference):
         eef_pos = kwargs.get("eef_pos", None)
         if self.policy_setup == "widowx_bridge":
             state = self.preprocess_widowx_proprio(eef_pos)
-            image_key = "image0"
+            image_key = "image_0"
         elif self.policy_setup == "google_robot":
             state = self.preprocess_google_robot_proprio(eef_pos)
-            image_key = "image0"
-
+            image_key = "image_0"
         if not self.action_plan:
             obs_for_policy: dict = {
                     "state":state, 
