@@ -2,7 +2,7 @@ server_ip=${1:-"0.0.0.0:8001"}
 logging_dir=${2:-"./results"}
 gpu_id=${3:-0}
 
-ckpt_path="pi0_regular_lora_29999"
+ckpt_path="pi0_regular_fft_35000"
 action_ensemble_temp=-0.8
 policy_model=pi0
 wandb_project="p-masked-vla"

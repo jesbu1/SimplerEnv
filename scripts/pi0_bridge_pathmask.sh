@@ -3,8 +3,10 @@ server_ip=${1:-"0.0.0.0:8001"}
 logging_dir=${2:-"./results"}
 gpu_id=${3:-0}
 
-ckpt_path="pi0_pathmask_lora_19000"
-action_ensemble_temp=-0.8
+action_ensemble_temp=0.5
+#ckpt_path="pi0_pathmask_lora_29999_vlmfreq3_temp{$action_ensemble_temp}"
+ckpt_path="pi0_pathmask_fft_35000_vlmfreq3_temp{$action_ensemble_temp}"
+#ckpt_path="pi0_pathmask_fft_35000"
 policy_model=pi0
 wandb_project="p-masked-vla"
 wandb_entity="clvr"
