@@ -71,6 +71,15 @@ if __name__ == "__main__":
             action_scale=args.action_scale,
             action_ensemble_temp=args.action_ensemble_temp,
         )
+    elif args.policy_model == "otter":
+        # follow the same structure as LerobotServerModel
+        from simpler_env.policies.lerobot.lerobot_server_model import LerobotServerModel
+        model = LerobotServerModel(
+            server_ip=args.server_ip,
+            policy_setup=args.policy_setup,
+            action_scale=args.action_scale,
+            action_ensemble_temp=args.action_ensemble_temp,
+        )
     else:
         raise NotImplementedError()
 
