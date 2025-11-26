@@ -3,7 +3,7 @@ robot=widowx_sink_camera_setup
 rgb_overlay_path=ManiSkill2_real2sim/data/real_inpainting/bridge_sink.png
 robot_init_x=0.127
 robot_init_y=0.06
-server_ip=${1:-"0.0.0.0:8000"}
+server_ip=${1:-"0.0.0.0:6000"}
 
 # Ensure no display variable is leaking from the shell unless we are using xvfb
 unset DISPLAY
