@@ -20,6 +20,11 @@ except ImportError as e:
 if __name__ == "__main__":
     args = get_args()
 
+    if args.remote_server_mode:
+        from simpler_env.evaluation.maniskill2_remote_server import run_maniskill2_remote_server
+        run_maniskill2_remote_server(args)
+        exit()
+
     os.environ["DISPLAY"] = ""
     # prevent a single jax process from taking up all the GPU memory
     os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"

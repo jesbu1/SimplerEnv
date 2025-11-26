@@ -1,0 +1,19 @@
+scene_name=bridge_table_1_v2
+robot=widowx_sink_camera_setup
+rgb_overlay_path=ManiSkill2_real2sim/data/real_inpainting/bridge_sink.png
+robot_init_x=0.127
+robot_init_y=0.06
+server_ip=${1:-"0.0.0.0:8000"}
+
+# Ensure no display variable is leaking from the shell unless we are using xvfb
+unset DISPLAY
+
+# Use xvfb-run to provide a dummy X server for svulkan2/vulkan
+xvfb-run -a -s "-screen 0 1024x768x24" python simpler_env/main_inference.py --remote-server-mode --server-ip ${server_ip} \
+  --robot ${robot} --policy-setup widowx_bridge \
+  --control-freq 5 --sim-freq 500 --max-episode-steps 120 \
+  --env-name PutEggplantInBasketScene-v0 --scene-name ${scene_name} \
+  --rgb-overlay-path ${rgb_overlay_path} \
+  --ckpt-path "" \
+  --robot-init-x ${robot_init_x} ${robot_init_x} 1 --robot-init-y ${robot_init_y} ${robot_init_y} 1 --obj-variation-mode episode --obj-episode-range 0 24 \
+  --robot-init-rot-quat-center 0 0 0 1 --robot-init-rot-rpy-range 0 0 1 0 0 1 0 0 1;
