@@ -43,7 +43,7 @@ def handle_client(conn, args):
             control_freq=args.control_freq,
             max_episode_steps=args.max_episode_steps,
             scene_name=args.scene_name,
-            camera_cfgs={"add_segmentation": True},
+            camera_cfgs={"add_segmentation": False},
             rgb_overlay_path=args.rgb_overlay_path,
         )
         
