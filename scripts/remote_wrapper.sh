@@ -15,7 +15,7 @@ xvfb-run -a -s "-screen 0 1024x768x24" python simpler_env/main_inference.py --re
   --env-name PutEggplantInBasketScene-v0 --scene-name ${scene_name} \
   --rgb-overlay-path ${rgb_overlay_path} \
   --ckpt-path "" \
-  --robot-init-x ${robot_init_x} ${robot_init_x} 1 --robot-init-y ${robot_init_y} ${robot_init_y} 1 --obj-variation-mode episode --obj-episode-range 0 1 \
+  --robot-init-x ${robot_init_x} ${robot_init_x} 1 --robot-init-y ${robot_init_y} ${robot_init_y} 1 --obj-variation-mode episode --obj-episode-range 0 4 \
   --robot-init-rot-quat-center 0 0 0 1 --robot-init-rot-rpy-range 0 0 1 0 0 1 0 0 1;
 
 scene_name=bridge_table_1_v1

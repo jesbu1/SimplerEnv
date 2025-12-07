@@ -1,10 +1,40 @@
 import numpy as np
+from PIL import Image
 import time
 import multiprocessing
-from multiprocessing.connection import Listener
+import socket
+import pickle
+import struct
 from simpler_env.policies.pi0.geometry import quat2mat, mat2euler
 from simpler_env.utils.env.env_builder import build_maniskill2_env, get_robot_control_mode
 from simpler_env.utils.env.observation_utils import get_image_from_maniskill2_obs_dict
+
+
+def send_msg(sock, msg):
+    """Send a message with length prefix over socket."""
+    msg_bytes = pickle.dumps(msg)
+    msg_len = struct.pack('>I', len(msg_bytes))
+    sock.sendall(msg_len + msg_bytes)
+
+
+def recv_msg(sock):
+    """Receive a length-prefixed message from socket."""
+    raw_msglen = recvall(sock, 4)
+    if not raw_msglen:
+        return None
+    msglen = struct.unpack('>I', raw_msglen)[0]
+    return pickle.loads(recvall(sock, msglen))
+
+
+def recvall(sock, n):
+    """Helper to receive n bytes or return None if EOF is hit."""
+    data = bytearray()
+    while len(data) < n:
+        packet = sock.recv(n - len(data))
+        if not packet:
+            return None
+        data.extend(packet)
+    return bytes(data)
 
 def preprocess_widowx_proprio(eef_pos) -> np.array:
     """convert ee rotation to the frame of top-down"""
@@ -23,11 +53,13 @@ def preprocess_widowx_proprio(eef_pos) -> np.array:
     )
     return raw_proprio
 
-def handle_client(conn, args):
+def handle_client(client_sock, args):
     """
     Handle a single client connection in a separate process.
     Creates its own environment instance.
     """
+    env = None
+    task_description = None
     try:
         print(f"[Process {multiprocessing.current_process().pid}] Client connected, building env...")
         
@@ -61,7 +93,10 @@ def handle_client(conn, args):
         print(f"[Process {multiprocessing.current_process().pid}] Env built: {args.env_name}")
         
         while True:
-            cmd = conn.recv()
+            cmd = recv_msg(client_sock)
+            if cmd is None:
+                print(f"[Process {multiprocessing.current_process().pid}] Client disconnected")
+                break
             
             if cmd['type'] == 'RESET':
                 # Pick random init parameters from args ranges
@@ -94,27 +129,41 @@ def handle_client(conn, args):
                 task_description = env.get_language_instruction()
                 
                 image = get_image_from_maniskill2_obs_dict(env, obs, camera_name=args.obs_camera_name)
+
+                image = Image.fromarray(image)
+                image = image.resize((224, 224))
+                image = np.array(image)
                 
-                conn.send({
+                send_msg(client_sock, {
                     'state': state,
-                    'image': image,
-                    'instruction': task_description
+                    'observation.images.image_0': image,
+                    'prompt': task_description  # Use 'prompt' key to match RemoteEnv expectations
                 })
                 
             elif cmd['type'] == 'STEP':
                 action = cmd['action']
+                action = np.array(action, dtype=np.float32)
                 obs, reward, done, truncated, info = env.step(action)
                 eef_pos = obs['agent']['eef_pos']
                 state = preprocess_widowx_proprio(eef_pos)
                 
                 image = get_image_from_maniskill2_obs_dict(env, obs, camera_name=args.obs_camera_name)
                 
-                conn.send({
+                image = Image.fromarray(image)
+                image = image.resize((224, 224))
+                image = np.array(image)
+                
+                # Check for success in info
+                success = info.get('success', False)
+                
+                send_msg(client_sock, {
                     'state': state,
-                    'image': image,
+                    'observation.images.image_0': image,
                     'reward': reward,
                     'done': done,
+                    'prompt': task_description,
                     'truncated': truncated,
+                    'success': success,
                     'info': info
                 })
                 
@@ -122,23 +171,28 @@ def handle_client(conn, args):
                 env.close()
                 break
                 
-    except EOFError:
-        print(f"[Process {multiprocessing.current_process().pid}] Connection closed")
     except Exception as e:
         print(f"[Process {multiprocessing.current_process().pid}] Error: {e}")
+        import traceback
+        traceback.print_exc()
     finally:
+        if env is not None:
+            try:
+                env.close()
+            except:
+                pass
         try:
-            env.close()
+            client_sock.close()
         except:
             pass
-        conn.close()
 
 
 def run_maniskill2_remote_server(args):
     """
     Run a remote server that spawns a new process with its own environment for each client.
+    Uses raw TCP sockets for compatibility with RemoteEnv.
     """
-    # Setup listener
+    # Setup server socket
     host = '0.0.0.0'
     port = 6000
     
@@ -148,26 +202,28 @@ def run_maniskill2_remote_server(args):
         if len(parts) > 1:
             port = int(parts[1])
             
-    address = (host, port)
+    server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server_sock.bind((host, port))
+    server_sock.listen(5)
         
-    print(f"Starting remote server on {address} (Multi-Process Mode)...")
-    listener = Listener(address, authkey=b'simpler_secret')
+    print(f"Starting remote server on {host}:{port} (Multi-Process Mode, TCP)...")
     
     try:
         while True:
             print("Waiting for connection...")
-            conn = listener.accept()
-            print(f"Connection accepted from {listener.last_accepted}, spawning process...")
+            client_sock, client_addr = server_sock.accept()
+            print(f"Connection accepted from {client_addr}, spawning process...")
             
             # Spawn a new process for this client
-            p = multiprocessing.Process(target=handle_client, args=(conn, args))
+            p = multiprocessing.Process(target=handle_client, args=(client_sock, args))
             p.daemon = True
             p.start()
             
             # Close our handle to the connection in the parent process
-            conn.close()
+            client_sock.close()
             
     except KeyboardInterrupt:
         print("Server stopping...")
     finally:
-        listener.close()
+        server_sock.close()
